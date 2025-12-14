@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Payment Status</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .center { max-width:600px; margin:80px auto; background:#fff; padding:24px; border-radius:10px; box-shadow:0 8px 30px rgba(0,0,0,0.06); text-align:center; }
+    .center h2{ margin-bottom:8px }
+    .center p{ color:#555 }
+    .actions{ margin-top:18px; display:flex; gap:10px; justify-content:center }
+  </style>
+</head>
+<body>
+  <div class="center">
+    <h2>Returned from UPI app</h2>
+    <p id="status">Checking payment status...</p>
+    <div class="actions">
+      <button id="backShop" class="ghost">Back to shop</button>
+      <button id="checkBtn" class="primary">Verify Payment</button>
+    </div>
+  </div>
+
+  <script>
+    // This page is a best-effort landing after the user returns from their UPI app.
+    // If you have a server that can verify payment status, call it here using order id or other reference.
+
+    const params = new URLSearchParams(location.search);
+    const amount = params.get('amount');
+    document.getElementById('status').textContent = amount ? ('Amount: ₹' + Number(amount).toFixed(2) + '. If you completed payment, click Verify Payment.') : 'If you completed payment, click Verify Payment.';
+
+    document.getElementById('backShop').addEventListener('click', ()=>{ window.location.href = 'index.html'; });
+
+    document.getElementById('checkBtn').addEventListener('click', ()=>{
+      // No server verification available in this demo. We'll assume success and show confirmation.
+      // If you implement a server, call it here to verify payment by transaction id or order id.
+      try{ localStorage.removeItem('pendingOrder'); }catch(e){}
+      document.getElementById('status').textContent = 'Payment assumed successful (demo). Thank you! Redirecting...';
+      setTimeout(()=> window.location.href = 'index.html', 1400);
+    });
+  </script>
+</body>
+</html>

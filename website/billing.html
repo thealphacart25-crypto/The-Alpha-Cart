@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Billing - The Alpha Cart</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .billing-page { padding: 30px; max-width:900px; margin:0 auto; }
+    .grid { display:grid; grid-template-columns: 1fr 360px; gap:24px; align-items:start; }
+    .card-box { background:#fff; padding:16px; border-radius:10px; box-shadow:0 6px 20px rgba(0,0,0,0.06); }
+    .summary-item { display:flex; justify-content:space-between; margin:8px 0; }
+    .small { font-size:13px; color:#666; }
+    .field { margin:10px 0; }
+    .field input, .field select { width:100%; padding:10px; border-radius:6px; border:1px solid #ddd; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>The Alpha Cart</div>
+  </header>
+
+  <main class="billing-page">
+    <h2>Billing & Payment</h2>
+    <div class="grid">
+      <div>
+        <div class="card-box">
+          <h3>Billing Address</h3>
+          <div class="field"><label>Full name<input id="bill-name" type="text"></label></div>
+          <div class="field"><label>Phone<input id="bill-phone" type="text"></label></div>
+          <div class="field"><label>Address line 1<input id="bill-addr1" type="text"></label></div>
+          <div class="field"><label>Address line 2<input id="bill-addr2" type="text"></label></div>
+          <div class="field"><label>City<input id="bill-city" type="text"></label></div>
+          <div class="field"><label>State<input id="bill-state" type="text"></label></div>
+          <div class="field"><label>Pincode<input id="bill-pincode" type="text"></label></div>
+          <div class="field"><label><input id="same-shipping" type="checkbox"> Same as shipping address</label></div>
+        </div>
+
+        <div class="card-box" style="margin-top:16px;">
+          <h3>Payment Method</h3>
+          <div class="field">
+            <select id="payment-method">
+                <option value="cod">Cash on Delivery (COD)</option>
+                <option value="card">Pay by Card (Demo)</option>
+                <option value="upi">UPI</option>
+                <option value="netbank">Net Banking (Demo)</option>
+            </select>
+          </div>
+
+          <div id="card-section" style="display:none;">
+            <div class="field"><input id="card-number" placeholder="Card number" /></div>
+            <div class="field"><input id="card-name" placeholder="Name on card" /></div>
+            <div style="display:flex; gap:8px;"><div class="field" style="flex:1"><input id="card-exp" placeholder="MM/YY" /></div><div class="field" style="width:120px"><input id="card-cvc" placeholder="CVC" /></div></div>
+          </div>
+
+          <!-- UPI section -->
+          <div id="upi-section" style="display:none; margin-top:12px;">
+            <div class="small">Pay directly to our UPI ID</div>
+            <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+              <div style="font-weight:700">9350362028@fam</div>
+              <button id="copyUpi" class="ghost" style="width:auto; padding:6px 10px;">Copy</button>
+            </div>
+            <div style="margin-top:8px;">
+              <img id="upi-qr" alt="UPI QR" style="width:160px; height:160px; border:1px solid #eee; padding:6px; background:#fff;" />
+            </div>
+            <div style="margin-top:8px; display:flex; gap:8px;">
+             <a href="https://pay.google.com"><button id="gpayBtn" class="primary" style="flex:1">Pay with GPay</button></a>
+             <a href="https://www.phonepe.com"><button id="phonepeBtn" class="primary" style="flex:1">Pay with PhonePe</button></a>
+            </div>
+            <div style="margin-top:8px;">
+              <button id="upiPayBtn" class="primary">Open UPI App / Pay</button>
+            </div>
+            <div class="small" style="margin-top:8px;">If you're on desktop, scan the QR using your UPI app.</div>
+          </div>
+
+          <!-- Netbanking demo section -->
+          <div id="netbank-section" style="display:none; margin-top:12px;">
+            <div class="small">Select your bank (demo)</div>
+            <div class="field"><select id="bank-select"><option value="bank1">State Bank</option><option value="bank2">HDFC</option><option value="bank3">ICICI</option></select></div>
+            <div style="margin-top:8px;"><button id="netbankPayBtn" class="primary">Proceed to NetBanking</button></div>
+          </div>
+
+          <div style="margin-top:12px;">
+            <button id="placeOrderBtn" class="primary">Place Order</button>
+          </div>
+        </div>
+      </div>
+
+      <aside>
+        <div class="card-box">
+          <h3>Order Summary</h3>
+          <div id="summary-list"></div>
+          <hr>
+          <div class="summary-item"><div class="small">Total</div><div id="summary-total" class="small">₹0</div></div>
+        </div>
+      </aside>
+    </div>
+
+    <div id="toast" class="toast" aria-hidden="true"></div>
+  </main>
+
+  <script>
+    function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('visible'); t.setAttribute('aria-hidden','false'); setTimeout(()=>{ t.classList.remove('visible'); t.setAttribute('aria-hidden','true'); },3000); }
+
+    // Load pendingOrder from localStorage
+    let pending=null;
+    try{ pending = JSON.parse(localStorage.getItem('pendingOrder')); }catch(e){ console.warn('no pendingOrder', e); }
+    if(!pending){ alert('No order found. Please add a product first.'); window.location.href='index.html'; }
+
+    const order = pending.order || {};
+    const shipping = pending.shipping || {};
+
+    // Populate summary
+    const summaryList = document.getElementById('summary-list');
+    const item = document.createElement('div'); item.className='summary-item';
+    item.innerHTML = '<div>'+ (order.product || 'Product') + ' x ' + (order.quantity||1) + '</div><div>' + ('₹'+Number(order.total).toFixed(2)) + '</div>';
+    summaryList.appendChild(item);
+    document.getElementById('summary-total').textContent = '₹' + Number(order.total).toFixed(2);
+
+    // Fill billing fields when 'same as shipping' checked
+    document.getElementById('same-shipping').addEventListener('change', function(){
+      if(this.checked){
+        document.getElementById('bill-name').value = shipping.name || '';
+        document.getElementById('bill-phone').value = shipping.phone || '';
+        document.getElementById('bill-addr1').value = shipping.addr1 || '';
+        document.getElementById('bill-addr2').value = shipping.addr2 || '';
+        document.getElementById('bill-city').value = shipping.city || '';
+        document.getElementById('bill-state').value = shipping.state || '';
+        document.getElementById('bill-pincode').value = shipping.pincode || '';
+      } else {
+        document.getElementById('bill-name').value = '';
+      }
+    });
+
+    // Payment method toggle
+    document.getElementById('payment-method').addEventListener('change', function(){
+      const v = this.value;
+      document.getElementById('card-section').style.display = v === 'card' ? 'block' : 'none';
+      document.getElementById('upi-section').style.display = v === 'upi' ? 'block' : 'none';
+      document.getElementById('netbank-section').style.display = v === 'netbank' ? 'block' : 'none';
+    });
+
+    // UPI / NetBanking handlers
+    const UPI_ID = '9350362028@fam';
+    const upiQrEl = document.getElementById('upi-qr');
+    const upiPayBtn = document.getElementById('upiPayBtn');
+    const copyUpiBtn = document.getElementById('copyUpi');
+
+    function getTotalAmount(){ return Number(order.total) || 0; }
+
+    function buildUpiLink(amount){
+      // upi deep link: pa=payee address, pn=payee name, am=amount, cu=INR
+      const pa = encodeURIComponent(UPI_ID);
+      const pn = encodeURIComponent('The Alpha Cart');
+      const am = encodeURIComponent(Number(amount).toFixed(2));
+      return `upi://pay?pa=${pa}&pn=${pn}&am=${am}&cu=INR`;
+    }
+
+    function renderUpiQr(){
+      const amt = getTotalAmount();
+      const upi = buildUpiLink(amt);
+      const qrUrl = 'https://chart.googleapis.com/chart?cht=qr&chs=240x240&chl=' + encodeURIComponent(upi);
+      upiQrEl.src = qrUrl;
+      upiPayBtn.dataset.upi = upi;
+    }
+
+    copyUpiBtn.addEventListener('click', ()=>{
+      navigator.clipboard && navigator.clipboard.writeText(UPI_ID).then(()=>{
+        showToast('UPI ID copied');
+      }).catch(()=>{ showToast('Copy failed'); });
+    });
+
+    function openIntentLink(intentUrl, fallback){
+      // Try opening app-specific intent. On many Android browsers this works.
+      // Fallback to generic UPI link if app doesn't open.
+      try{
+        // mark that we're awaiting payment return
+        try{ localStorage.setItem('awaitingPayment', JSON.stringify({ts:Date.now(), amount:getTotalAmount()})); }catch(e){}
+        window.location.href = intentUrl;
+        // In case nothing happens, after 1.2s show fallback toast
+        setTimeout(()=>{
+          showToast('If app did not open, use the QR or copy the UPI ID.');
+          if(fallback) window.location.href = fallback;
+        }, 1200);
+      }catch(e){
+        if(fallback) window.location.href = fallback;
+      }
+    }
+
+    document.getElementById('gpayBtn').addEventListener('click', ()=>{
+      const amt = getTotalAmount();
+      const pa = encodeURIComponent(UPI_ID);
+      const pn = encodeURIComponent('The Alpha Cart');
+      const am = encodeURIComponent(Number(amt).toFixed(2));
+      const upiParams = `pa=${pa}&pn=${pn}&am=${am}&cu=INR`;
+      const fallback = buildUpiLink(amt);
+      // Only attempt Android intent on Android devices
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      if(isAndroid){
+        // Use intent URI format that many Android browsers support: intent://pay?pa=...#Intent;scheme=upi;package=...;end
+        const gpayIntent = `intent://pay?${upiParams}#Intent;scheme=upi;package=com.google.android.apps.nbu.paisa.user;end`;
+        openIntentLink(gpayIntent, fallback);
+      } else {
+        // Non-Android: open generic UPI link which may open a UPI app if available
+        window.location.href = fallback;
+      }
+    });
+
+    document.getElementById('phonepeBtn').addEventListener('click', ()=>{
+      const amt = getTotalAmount();
+      const pa = encodeURIComponent(UPI_ID);
+      const pn = encodeURIComponent('The Alpha Cart');
+      const am = encodeURIComponent(Number(amt).toFixed(2));
+      const upiParams = `pa=${pa}&pn=${pn}&am=${am}&cu=INR`;
+      const fallback = buildUpiLink(amt);
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      if(isAndroid){
+        const phonepeIntent = `intent://pay?${upiParams}#Intent;scheme=upi;package=com.phonepe.app;end`;
+        openIntentLink(phonepeIntent, fallback);
+      } else {
+        window.location.href = fallback;
+      }
+    });
+
+    upiPayBtn.addEventListener('click', ()=>{
+      const upi = upiPayBtn.dataset.upi || buildUpiLink(getTotalAmount());
+      try{ localStorage.setItem('awaitingPayment', JSON.stringify({ts:Date.now(), amount:getTotalAmount()})); }catch(e){}
+      // open deep link; on mobile this should open the UPI app
+      window.location.href = upi;
+      // As fallback, show message
+      setTimeout(()=>{ showToast('If UPI app did not open, scan the QR or copy the UPI ID.'); }, 800);
+    });
+
+    // When the user returns to the browser after launching a UPI app, some browsers will trigger visibilitychange.
+    // We'll redirect to a success-check page as a best-effort way to continue the flow. Note: this does NOT verify payment.
+    document.addEventListener('visibilitychange', ()=>{
+      if(document.visibilityState === 'visible'){
+        try{
+          const awaiting = JSON.parse(localStorage.getItem('awaitingPayment'));
+          if(awaiting){
+            // clear the flag and navigate to success-check page which can perform server-side verification if available
+            localStorage.removeItem('awaitingPayment');
+            // pass amount via query
+            const params = new URLSearchParams({amount: awaiting.amount});
+            window.location.href = 'payment-success.html?' + params.toString();
+          }
+        }catch(e){ /* ignore */ }
+      }
+    });
+
+    // When netbanking chosen, simulate redirect and success
+    document.getElementById('netbankPayBtn').addEventListener('click', ()=>{
+      const bank = document.getElementById('bank-select').value;
+      showToast('Redirecting to ' + bank + ' (demo)...');
+      // simulate network/payment delay
+      setTimeout(()=>{
+        // mark order placed
+        localStorage.removeItem('pendingOrder');
+        showToast('Payment successful via NetBanking (demo)');
+        setTimeout(()=> window.location.href='index.html', 1200);
+      }, 1800);
+    });
+
+    // render UPI QR on load
+    renderUpiQr();
+
+    document.getElementById('placeOrderBtn').addEventListener('click', function(){
+      const name = document.getElementById('bill-name').value.trim();
+      const phone = document.getElementById('bill-phone').value.trim();
+      const addr1 = document.getElementById('bill-addr1').value.trim();
+      const city = document.getElementById('bill-city').value.trim();
+      const state = document.getElementById('bill-state').value.trim();
+      const pincode = document.getElementById('bill-pincode').value.trim();
+
+      if(!name || !phone || !addr1 || !city || !state || !pincode){ showToast('Please fill billing address'); return; }
+
+      const payment = document.getElementById('payment-method').value;
+      if(payment === 'card'){
+        const card = document.getElementById('card-number').value.trim();
+        if(!card){ showToast('Enter card number (demo)'); return; }
+      }
+
+      // Simulate placing order
+      const finalOrder = { order, shipping: { ...shipping }, billing: { name, phone, addr1, city, state, pincode }, payment };
+      console.log('Final order (demo):', finalOrder);
+      // clear pending order
+      localStorage.removeItem('pendingOrder');
+      showToast('Order placed successfully!');
+      setTimeout(()=>{ window.location.href = 'index.html'; }, 1400);
+    });
+  </script>
+</body>
+</html>

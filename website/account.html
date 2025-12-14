@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>My Account - The Alpha Cart</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .account-page{ max-width:1000px; margin:30px auto; display:grid; grid-template-columns: 260px 1fr; gap:20px; }
+    .account-sidebar { background:#fff; padding:16px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.06);} 
+    .account-main { background:#fff; padding:16px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.06);} 
+    .account-sidebar ul{ list-style:none; padding:0; }
+    .account-sidebar li{ padding:10px 6px; cursor:pointer; border-radius:6px; }
+    .account-sidebar li.active{ background:#f2f6fb; font-weight:700; }
+    .addr { border:1px solid #eee; padding:10px; border-radius:6px; margin-bottom:10px; }
+    .small { font-size:13px; color:#666; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>The Alpha Cart</div>
+  </header>
+
+  <main class="account-page">
+    <aside class="account-sidebar card-box">
+      <h3>My Account</h3>
+      <ul>
+        <li id="nav-profile" class="active">Profile</li>
+        <li id="nav-orders">Orders</li>
+        <li id="nav-addresses">Addresses</li>
+        <li id="nav-wishlist">Wishlist</li>
+        <li id="nav-logout">Logout</li>
+      </ul>
+    </aside>
+
+    <section class="account-main card-box" id="panel">
+      <h3 id="panel-title">Profile</h3>
+      <div id="panel-content">
+        <p class="small">Phone: <span id="user-phone">-</span></p>
+        <p class="small">Member since: <span id="member-since">-</span></p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Simple client-side account pages using localStorage
+    const nav = { profile: document.getElementById('nav-profile'), orders: document.getElementById('nav-orders'), addresses: document.getElementById('nav-addresses'), wishlist: document.getElementById('nav-wishlist'), logout: document.getElementById('nav-logout') };
+    const panelTitle = document.getElementById('panel-title');
+    const panelContent = document.getElementById('panel-content');
+
+    function setActive(key){ Object.values(nav).forEach(n=>n.classList.remove('active')); nav[key].classList.add('active'); }
+
+    function loadProfile(){ setActive('profile'); panelTitle.textContent='Profile'; const phone = localStorage.getItem('userPhone') || 'Not logged in'; document.getElementById('user-phone').textContent = phone; const since = localStorage.getItem('userSince') || '-'; document.getElementById('member-since').textContent = since; panelContent.innerHTML = `<p class="small">Phone: ${phone}</p><p class="small">Member since: ${since}</p>`; }
+
+    function loadOrders(){ setActive('orders'); panelTitle.textContent='Orders'; const orders = JSON.parse(localStorage.getItem('orders')||'[]'); if(!orders.length){ panelContent.innerHTML = '<p>No orders yet</p>'; return; } let html = '<ul>'; orders.forEach(o=>{ html += `<li class="small">${o.id || 'ORD'} - ₹${Number(o.amount).toFixed(2)}</li>`; }); html += '</ul>'; panelContent.innerHTML = html; }
+
+    function loadAddresses(){ setActive('addresses'); panelTitle.textContent='Addresses'; const addrs = JSON.parse(localStorage.getItem('savedAddresses')||'[]'); if(!addrs.length){ panelContent.innerHTML = '<p>No saved addresses</p><p><button id="addAddrBtn" class="primary">Add address</button></p>'; document.getElementById('addAddrBtn').addEventListener('click', showAddAddressForm); return; } let html=''; addrs.forEach((a,idx)=>{ html += `<div class="addr"><div><strong>${a.name}</strong> (${a.phone})</div><div class="small">${a.addr1} ${a.addr2 || ''}, ${a.city} - ${a.pincode}</div><div style="margin-top:6px;"><button class="ghost" data-idx="${idx}" onclick="removeAddress(this)">Remove</button></div></div>`; }); html += '<p><button id="addAddrBtn2" class="primary">Add address</button></p>'; panelContent.innerHTML = html; document.getElementById('addAddrBtn2').addEventListener('click', showAddAddressForm);
+    }
+
+    function showAddAddressForm(){ panelContent.innerHTML = `<div><label>Full name<input id="a-name" type="text"></label></div><div><label>Phone<input id="a-phone" type="text"></label></div><div><label>Address 1<input id="a-addr1" type="text"></label></div><div><label>Address 2<input id="a-addr2" type="text"></label></div><div><label>City<input id="a-city" type="text"></label></div><div><label>Pincode<input id="a-pincode" type="text"></label></div><div style="margin-top:8px;"><button id="saveAddr" class="primary">Save</button></div>`; document.getElementById('saveAddr').addEventListener('click', ()=>{ const a={ name:document.getElementById('a-name').value.trim(), phone:document.getElementById('a-phone').value.trim(), addr1:document.getElementById('a-addr1').value.trim(), addr2:document.getElementById('a-addr2').value.trim(), city:document.getElementById('a-city').value.trim(), pincode:document.getElementById('a-pincode').value.trim() }; if(!a.name||!a.phone||!a.addr1){ alert('Fill required'); return; } const arr = JSON.parse(localStorage.getItem('savedAddresses')||'[]'); arr.push(a); localStorage.setItem('savedAddresses', JSON.stringify(arr)); loadAddresses(); }); }
+
+    function removeAddress(btn){ const idx = Number(btn.getAttribute('data-idx')); const arr = JSON.parse(localStorage.getItem('savedAddresses')||'[]'); arr.splice(idx,1); localStorage.setItem('savedAddresses', JSON.stringify(arr)); loadAddresses(); }
+
+    function loadWishlist(){ setActive('wishlist'); panelTitle.textContent='Wishlist'; const w = JSON.parse(localStorage.getItem('wishlist')||'[]'); if(!w.length){ panelContent.innerHTML='<p>Your wishlist is empty</p>'; return; } panelContent.innerHTML = '<ul>'+w.map(i=>`<li>${i}</li>`).join('')+'</ul>'; }
+
+    function doLogout(){ localStorage.removeItem('loggedIn'); localStorage.removeItem('userPhone'); alert('Logged out'); window.location.href='index.html'; }
+
+    nav.profile.addEventListener('click', loadProfile);
+    nav.orders.addEventListener('click', loadOrders);
+    nav.addresses.addEventListener('click', loadAddresses);
+    nav.wishlist.addEventListener('click', loadWishlist);
+    nav.logout.addEventListener('click', doLogout);
+
+    // init
+    loadProfile();
+    window.removeAddress = removeAddress; // expose for inline handlers
+  </script>
+</body>
+</html>

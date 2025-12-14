@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Checkout - The Alpha Cart</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div>The Alpha Cart</div>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="#">Shop</a>
+            <a href="#">About</a>
+            <a href="#">Contact</a>
+        </nav>
+        <div class="cart-icon">🛒</div>
+    </header>
+
+    <main class="checkout-page">
+        <section class="checkout-summary">
+            <h2>Order Summary</h2>
+            <div class="product-card">
+                <img src="product.1.jpg" alt="product" id="prod-image">
+                <div class="product-info">
+                    <h3 id="prod-name">Product</h3>
+                    <p>Unit price: <strong id="prod-unit-price">₹0</strong></p>
+                    <p>Total: <strong id="prod-price">₹0</strong></p>
+                    <label>
+                        Quantity
+                        <input type="number" id="qty" value="1" min="1">
+                    </label>
+                    <button id="buy-now" class="primary">Buy Now</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Address modal (hidden by default) -->
+    <div id="address-modal" class="modal">
+        <div class="modal-panel">
+            <button class="modal-close" id="close-modal">✕</button>
+            <h3>Enter delivery address</h3>
+            <form id="address-form">
+                <div class="row">
+                    <label>Full name<input type="text" id="name" required></label>
+                    <label>Phone<input type="tel" id="phone" required placeholder="10-digit"></label>
+                </div>
+                <label>Address line 1<input type="text" id="addr1" required></label>
+                <label>Address line 2<input type="text" id="addr2"></label>
+                <div class="row">
+                    <label>City<input type="text" id="city" required></label>
+                    <label>State<input type="text" id="state" required></label>
+                </div>
+                <label>Pincode<input type="text" id="pincode" required placeholder="e.g. 560001"></label>
+
+                <div class="actions">
+                    <button type="button" id="save-address" class="primary">Continue to Billing</button>
+                    <button type="button" id="cancel" class="ghost">Cancel</button>
+                </div>
+            </form>
+            <p class="modal-note">We will never share your details. This is a demo flow.</p>
+        </div>
+    </div>
+
+    <div id="toast" class="toast" aria-hidden="true"></div>
+
+    <script>
+        // parse query params for product details
+        function qs(key){
+            const params = new URLSearchParams(location.search);
+            return params.get(key);
+        }
+
+    const prodNameEl = document.getElementById('prod-name');
+    const prodUnitEl = document.getElementById('prod-unit-price');
+    const prodPriceEl = document.getElementById('prod-price');
+        const qtyEl = document.getElementById('qty');
+        const buyBtn = document.getElementById('buy-now');
+
+    const product = qs('product') || 'Selected product';
+    // default unit price to ₹500 if no price provided in querystring
+    const priceRaw = Number(qs('price')) || 500;
+
+        function formatINR(n){
+            // format with rupee symbol and two decimals
+            return '₹' + Number(n).toFixed(2);
+        }
+
+        function updateSummary(){
+            const qty = Math.max(1, Number(qtyEl.value) || 1);
+            prodNameEl.textContent = product;
+            prodUnitEl.textContent = formatINR(priceRaw);
+            prodPriceEl.textContent = formatINR(priceRaw * qty);
+        }
+
+        qtyEl.addEventListener('input', updateSummary);
+        updateSummary();
+
+        // modal control
+        const modal = document.getElementById('address-modal');
+        const closeModal = document.getElementById('close-modal');
+        const cancelBtn = document.getElementById('cancel');
+        const saveBtn = document.getElementById('save-address');
+
+        function openModal(){
+            modal.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+        function hideModal(){
+            modal.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        buyBtn.addEventListener('click', openModal);
+        closeModal.addEventListener('click', hideModal);
+        cancelBtn.addEventListener('click', hideModal);
+
+        // simple validation and fake submit
+        function showToast(msg){
+            const t = document.getElementById('toast');
+            t.textContent = msg; t.classList.add('visible'); t.setAttribute('aria-hidden','false');
+            setTimeout(()=>{ t.classList.remove('visible'); t.setAttribute('aria-hidden','true'); }, 3500);
+        }
+
+        // --- Pincode lookup: auto-detect state/city using public Postal Pincode API ---
+        const pincodeEl = document.getElementById('pincode');
+        const cityEl = document.getElementById('city');
+        const stateEl = document.getElementById('state');
+
+        // debounce helper
+        function debounce(fn, wait){ let t; return (...args)=>{ clearTimeout(t); t = setTimeout(()=>fn.apply(this,args), wait); }; }
+
+        async function lookupPincode(pin){
+            pin = (pin || '').trim();
+            if(!/^[0-9]{5,6}$/.test(pin)) return; // don't lookup if clearly invalid
+            try{
+                showToast('Looking up pincode...');
+                const res = await fetch('https://api.postalpincode.in/pincode/' + encodeURIComponent(pin));
+                const data = await res.json();
+                if(Array.isArray(data) && data[0] && data[0].Status === 'Success' && data[0].PostOffice && data[0].PostOffice.length){
+                    const po = data[0].PostOffice[0];
+                    // Fill city/district and state if available
+                    if(po.District) cityEl.value = po.District;
+                    if(po.State) stateEl.value = po.State;
+                    showToast('Pincode detected: ' + (po.State || po.District));
+                } else {
+                    showToast('Pincode not found');
+                }
+            }catch(e){
+                console.error('Pincode lookup failed', e);
+                showToast('Could not lookup pincode');
+            }
+        }
+
+        // Run lookup on blur and on input when length >=5 (debounced)
+        pincodeEl.addEventListener('blur', ()=> lookupPincode(pincodeEl.value));
+        pincodeEl.addEventListener('input', debounce(()=>{
+            const v = pincodeEl.value.trim(); if(v.length >= 5) lookupPincode(v);
+        }, 500));
+
+        saveBtn.addEventListener('click', ()=>{
+            const name = document.getElementById('name').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const addr1 = document.getElementById('addr1').value.trim();
+            const addr2 = document.getElementById('addr2').value.trim();
+            const city = document.getElementById('city').value.trim();
+            const state = document.getElementById('state').value.trim();
+            const pincode = document.getElementById('pincode').value.trim();
+
+            if(!name || !phone || !addr1 || !city || !state || !pincode){
+                showToast('Please fill all required fields');
+                return;
+            }
+            if(!/^[0-9]{10}$/.test(phone)){
+                showToast('Enter a valid 10-digit phone');
+                return;
+            }
+            if(!/^[0-9]{5,6}$/.test(pincode)){
+                showToast('Enter a valid pincode');
+                return;
+            }
+
+            // Prepare order and address and save to localStorage for billing page
+            const order = {
+                product: product,
+                quantity: Number(qtyEl.value) || 1,
+                unitPrice: Number(priceRaw),
+                total: (priceRaw * (Number(qtyEl.value)||1)).toFixed(2)
+            };
+            const shipping = { name, phone, addr1, addr2, city, state, pincode };
+            // Save to localStorage
+            try{
+                localStorage.setItem('pendingOrder', JSON.stringify({ order, shipping }));
+            }catch(e){ console.warn('Failed to save pendingOrder', e); }
+
+            hideModal();
+            // Go to billing page
+            window.location.href = 'billing.html';
+        });
+    </script>
+
+</body>
+</html>

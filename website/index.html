@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="google-adsense-account" content="ca-pub-9264556370676028">
+    <title>The Alpha Cart</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header>
+        <div class="mi">The Alpha Cart</div>
+        <div class="search-bar">
+            <input type="text" placeholder="Search..." style="width: 100px;">
+            <div class="suggestions"></div>
+        </div>
+        <nav>
+            <a href="#">Home</a>
+            <a href="index2.html">Log In</a>
+            <div class="cart-icon">🛒</div>
+        </nav>
+    </header>
+
+    <!-- HERO -->
+    <section class="hero">
+        <img src="logo-removebg-preview.png" ; style="height: 340px; width: 340px;">
+        <h1>Welcome to The Alpha Cart</h1>
+        <p>Your favorite online store for everything</p>
+        <button class="abc">Shop Now</button>
+    </section>
+    <div class="marquee-container">
+        <!-- Right corner se left taraf (left-to-right animation) -->
+        <div class="marquee-group">
+            <div class="marquee-text left-to-right" id="leftText">
+            50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off      50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off   50%Off 50%Off 50%Off 50%Off   50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 50%Off  
+            </div>
+        </div>
+
+        <!-- Left corner se right taraf (right-to-left animation) -->
+        <div class="marquee-group">
+            <div class="marquee-text right-to-left" id="rightText">
+                50%Off 50%Off 50%Off 50%Off50%Off 50%Off 50%Off 50%Off  50%Off 50%Off 50%Off 
+            </div>
+        </div>
+    </div>
+
+    <!-- PRODUCTS -->
+    <section class="products">
+        <h2>Featured Products</h2>
+        <div class="product-grid">
+
+            <div class="product">
+                <img src="product 1.png" alt="">
+                <h3>Product 1</h3>
+                <p>$25</p>
+                <button onclick="addToCart('Product 1', 25)">Add to Cart</button>
+            </div>
+
+            <div class="product">
+                <img src="product 2.webp" alt="">
+                <h3>Product 2</h3>
+                <p>$35</p>
+                <button onclick="addToCart('Product 2', 35)">Add to Cart</button>
+            </div>
+
+            <div class="product">
+                <img src="product 3.png" alt="">
+                <h3>Product 3</h3>
+                <p>55% OFF ₹ 500</p>
+                <button onclick="addToCart('Product 3', 50)">Add to Cart</button>
+            </div>
+
+            <div class="product">
+                <img src="product.1.jpg" alt="">
+                <h3>Intelligent book</h3>
+                <p class="green"><b>
+                        <font style="color: green;">55% OFF</font> ₹ 500
+                    </b></p>
+                <!-- Link now points to checkout.html and passes product info via querystring -->
+                <a href="index1.html"><button class="bb" ; style="background-color:rgb(216, 80, 31);">⚡ Buy
+                        Now</button></a>
+                <button></button>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- CART POPUP -->
+    <div id="cart-popup" class="cart-popup">
+        <div class="cart-box">
+            <h2>Your Cart</h2>
+            <ul id="cart-items"></ul>
+            <p class="total">Total: $<span id="cart-total">0</span></p>
+            <button onclick="closeCart()">Close</button>
+        </div>
+    </div>
+
+    <div id="recaptcha-container"></div>
+
+
+
+
+</body>
+
+<!-- Promo popup -->
+<div id="promo-overlay" class="promo-overlay" aria-hidden="true">
+    <div class="promo-panel">
+        <button class="promo-close" id="promoClose" aria-label="Close">✕</button>
+        <div class="promo-badge">50% OFF</div>
+        <h3>Limited time offer</h3>
+        <p>Get flat 50% off on your first purchase. Use code: <strong>ALPHA50</strong> at checkout.</p>
+        <div class="promo-actions">
+            <a class="btn primary" id="promoShop" href="index.html#products">Shop Now</a>
+            <button class="btn ghost" id="promoLater">Maybe later</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Promo popup behaviour: show once per session/localStorage
+    (function () {
+        const overlay = document.getElementById('promo-overlay');
+        const closeBtn = document.getElementById('promoClose');
+        const laterBtn = document.getElementById('promoLater');
+        const shopBtn = document.getElementById('promoShop');
+        const KEY = 'promo50Seen';
+
+        function showPromo() {
+            overlay.setAttribute('aria-hidden', 'false');
+            overlay.classList.add('open');
+        }
+        function hidePromo() {
+            overlay.setAttribute('aria-hidden', 'true');
+            overlay.classList.remove('open');
+        }
+
+        try {
+            const seen = localStorage.getItem(KEY);
+            if (!seen) {
+                setTimeout(showPromo, 800);
+            }
+        } catch (e) { setTimeout(showPromo, 800); }
+
+        closeBtn.addEventListener('click', () => { hidePromo(); try { localStorage.setItem(KEY, '1'); } catch (e) { } });
+        laterBtn.addEventListener('click', () => { hidePromo(); try { localStorage.setItem(KEY, '1'); } catch (e) { } });
+        shopBtn.addEventListener('click', () => { try { localStorage.setItem(KEY, '1'); } catch (e) { } });
+
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { hidePromo(); } });
+    })();
+
+
+    // Update header auth area to show account when logged in
+//     (function () {
+//         try {
+//             const authArea = document.getElementById('auth-area');
+//             const logged = localStorage.getItem('loggedIn');
+//             const phone = localStorage.getItem('userPhone');
+//             if (logged && phone) {
+//                 authArea.innerHTML = `<a href="account.html"><h4 class="log">My Account</h4></a>`;
+//             } else {
+//                 authArea.innerHTML = `<a href="index2.html"><h4 class="log">Log In</h4></a>`;
+//             }
+//         } catch (e) { }
+//     })();
+
+//     const texts = document.querySelectorAll('.marquee-text');
+
+// texts.forEach(text => {
+//   text.addEventListener('mouseenter', function() {
+//     this.classList.add('paused');
+//     this.style.transform = 'translateY(-40px) scale(1.25) rotateX(10deg)';
+//     this.style.textShadow = '0 0 60px rgba(255,255,255,0.9)';
+//     this.style.letterSpacing = '30px';
+//     this.style.fontSize = '4em';
+//   });
+  
+//   text.addEventListener('mouseleave', function() {
+//     this.classList.remove('paused');
+//     this.style.transform = '';
+//     this.style.textShadow = '3px 3px 10px rgba(0,0,0,0.5)';
+//     this.style.letterSpacing = '18px';
+//     this.style.fontSize = '3.5em';
+//   });
+// });
+</script>
+
+<script type="module" src="script.js"></script>
+
+</html>
